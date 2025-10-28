@@ -14,6 +14,7 @@ A PyTorch deep learning project for automated pneumonia detection from chest X-r
 - 🖥️ CLI-based training scripts for production workflows
 - 📈 TensorBoard integration for training visualization
 - 🎯 MONAI integration for medical imaging preprocessing
+- 💻 **Cross-platform support**: Works on Linux, macOS, and Windows (cmd/PowerShell)
 
 ## Project Structure
 
@@ -39,15 +40,24 @@ Chest-X-Ray-Pneumonia-Classification/
 
 ### Prerequisites
 
-- Python 3.8+
+- Python 3.12 (as Colab use 3.12.12)
 - CUDA-capable GPU (recommended for training)
 - Kaggle account (for dataset download)
+- **Windows users**: cmd or PowerShell (both are supported)
+- **Linux/macOS users**: bash shell
 
 ### Setup
 
 1. **Clone the repository**
 
 ```bash
+# Linux/macOS
+git clone https://github.com/Leoxenon/Chest-X-Ray-Pneumonia-Classification.git
+cd Chest-X-Ray-Pneumonia-Classification
+```
+
+```cmd
+# Windows (cmd)
 git clone https://github.com/Leoxenon/Chest-X-Ray-Pneumonia-Classification.git
 cd Chest-X-Ray-Pneumonia-Classification
 ```
@@ -55,17 +65,33 @@ cd Chest-X-Ray-Pneumonia-Classification
 2. **Create a virtual environment** (recommended)
 
 ```bash
+# Linux/macOS
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+source venv/bin/activate
+```
+
+```cmd
+# Windows (cmd)
+python -m venv venv
+venv\Scripts\activate
+```
+
+```powershell
+# Windows (PowerShell)
+python -m venv venv
+venv\Scripts\Activate.ps1
 ```
 
 3. **Install dependencies**
 
 ```bash
+# All platforms
 pip install -r requirements.txt
 ```
 
 4. **Download the dataset**
+
+**For Linux/macOS:**
 
 First, configure your Kaggle API credentials:
 - Go to https://www.kaggle.com/account
@@ -74,9 +100,34 @@ First, configure your Kaggle API credentials:
 - Run: `chmod 600 ~/.kaggle/kaggle.json`
 
 Then download the dataset:
-
 ```bash
 bash data/download_data.sh
+```
+
+**For Windows:**
+
+First, configure your Kaggle API credentials:
+- Go to https://www.kaggle.com/account
+- Create a new API token (downloads `kaggle.json`)
+- Place `kaggle.json` in `C:\Users\<username>\.kaggle\`
+
+Then download the dataset manually or using Python:
+```cmd
+# Install kaggle CLI if not already installed
+pip install kaggle
+
+# Download and extract dataset
+kaggle datasets download -d paultimothymooney/chest-xray-pneumonia -p data/
+cd data
+tar -xf chest-xray-pneumonia.zip
+```
+
+Or use PowerShell:
+```powershell
+# Download and extract dataset
+kaggle datasets download -d paultimothymooney/chest-xray-pneumonia -p data/
+cd data
+Expand-Archive chest-xray-pneumonia.zip -DestinationPath .
 ```
 
 The dataset will be downloaded and extracted to `data/chest_xray/`.
@@ -102,6 +153,7 @@ The notebook includes:
 #### Train ResNet18 + CBAM
 
 ```bash
+# Linux/macOS
 python src/train.py \
     --data-dir data/chest_xray \
     --model resnet_cbam \
@@ -112,9 +164,27 @@ python src/train.py \
     --class-weights
 ```
 
+```cmd
+# Windows (cmd)
+python src/train.py --data-dir data/chest_xray --model resnet_cbam --epochs 50 --batch-size 32 --lr 0.001 --output-dir checkpoints/resnet_cbam --class-weights
+```
+
+```powershell
+# Windows (PowerShell)
+python src/train.py `
+    --data-dir data/chest_xray `
+    --model resnet_cbam `
+    --epochs 50 `
+    --batch-size 32 `
+    --lr 0.001 `
+    --output-dir checkpoints/resnet_cbam `
+    --class-weights
+```
+
 #### Train Multimodal Model
 
 ```bash
+# Linux/macOS
 python src/train.py \
     --data-dir data/chest_xray \
     --model multimodal \
@@ -122,6 +192,23 @@ python src/train.py \
     --epochs 50 \
     --batch-size 16 \
     --lr 0.0001 \
+    --output-dir checkpoints/multimodal
+```
+
+```cmd
+# Windows (cmd)
+python src/train.py --data-dir data/chest_xray --model multimodal --fusion-method concat --epochs 50 --batch-size 16 --lr 0.0001 --output-dir checkpoints/multimodal
+```
+
+```powershell
+# Windows (PowerShell)
+python src/train.py `
+    --data-dir data/chest_xray `
+    --model multimodal `
+    --fusion-method concat `
+    --epochs 50 `
+    --batch-size 16 `
+    --lr 0.0001 `
     --output-dir checkpoints/multimodal
 ```
 
@@ -143,11 +230,27 @@ python src/train.py \
 Evaluate a trained model:
 
 ```bash
+# Linux/macOS
 python src/evaluate.py \
     --data-dir data/chest_xray \
     --model resnet_cbam \
     --checkpoint checkpoints/resnet_cbam/best_model.pth \
     --split test \
+    --output-dir evaluation/resnet_cbam
+```
+
+```cmd
+# Windows (cmd)
+python src/evaluate.py --data-dir data/chest_xray --model resnet_cbam --checkpoint checkpoints/resnet_cbam/best_model.pth --split test --output-dir evaluation/resnet_cbam
+```
+
+```powershell
+# Windows (PowerShell)
+python src/evaluate.py `
+    --data-dir data/chest_xray `
+    --model resnet_cbam `
+    --checkpoint checkpoints/resnet_cbam/best_model.pth `
+    --split test `
     --output-dir evaluation/resnet_cbam
 ```
 
@@ -163,6 +266,12 @@ This will generate:
 Training progress can be monitored using TensorBoard:
 
 ```bash
+# Linux/macOS
+tensorboard --logdir checkpoints/resnet_cbam/logs
+```
+
+```cmd
+# Windows (cmd/PowerShell)
 tensorboard --logdir checkpoints/resnet_cbam/logs
 ```
 

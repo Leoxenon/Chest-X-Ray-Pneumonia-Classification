@@ -29,40 +29,83 @@ env/
 ENV/
 env.bak/
 venv.bak/
+mini-project/
 
-# PyCharm
+# Anaconda
+.conda/
+.condarc
+anaconda_projects/
+conda-meta/
+*.conda
+*.tar.bz2
+
+# IDEs
 .idea/
-
-# VSCode
 .vscode/
+*.swp
+*.swo
+*~
 
 # Jupyter Notebook
-.ipynb_checkpoints
+.ipynb_checkpoints/
 *.ipynb_checkpoints/
+.jupyter/
 
-# Data
+# Data files (large datasets should not be in repo)
 data/chest_xray/
+data/__MACOSX/
 data/*.zip
 data/*.tar.gz
+data/*.rar
 *.h5
 *.hdf5
+*.pkl
+*.pickle
 
-# Model checkpoints
+# Model checkpoints and weights (too large for git)
 checkpoints/
 *.pth
 *.pt
 *.ckpt
+*.weights
+*.model
 
-# Logs
+# Evaluation results (generated files)
+evaluation/
+results/
+outputs/
+
+# Training logs and TensorBoard
 logs/
 *.log
 runs/
 wandb/
+tensorboard/
+events.out.tfevents.*
 
-# OS
+# OS-specific files
 .DS_Store
 Thumbs.db
+desktop.ini
 
-# Temporary files
+# Temporary and backup files
 tmp/
 temp/
+*.tmp
+*.bak
+*.swp
+~*
+
+# Kaggle credentials (IMPORTANT: never commit API keys!)
+.kaggle/
+kaggle.json
+
+# Large media files
+*.mp4
+*.avi
+*.mov
+*.mkv
+
+# Compiled files
+*.pyc
+*.pyo

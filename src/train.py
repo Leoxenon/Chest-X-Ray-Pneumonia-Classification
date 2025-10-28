@@ -191,7 +191,7 @@ def train(args):
     
     # Learning rate scheduler
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, mode='min', factor=0.5, patience=5, verbose=True
+        optimizer, mode='min', factor=0.5, patience=5
     )
     
     # Training loop
@@ -211,7 +211,11 @@ def train(args):
         val_loss, val_acc = validate(model, val_loader, criterion, device, epoch, writer)
         
         # Update learning rate
+        old_lr = optimizer.param_groups[0]['lr']
         scheduler.step(val_loss)
+        new_lr = optimizer.param_groups[0]['lr']
+        if old_lr != new_lr:
+            print(f'Learning rate updated from {old_lr} to {new_lr}')
         
         # Save best model
         if val_acc > best_val_acc:
