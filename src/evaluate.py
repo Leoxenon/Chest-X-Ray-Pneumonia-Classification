@@ -7,6 +7,7 @@ import argparse
 from pathlib import Path
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from tqdm import tqdm
 import numpy as np
 import matplotlib.pyplot as plt
@@ -20,8 +21,10 @@ from sklearn.metrics import (
     average_precision_score
 )
 import json
+from PIL import Image
+from torchvision import transforms
 
-from data import get_data_loaders
+from data import get_data_loaders, ChestXRayDataset
 from models.resnet_cbam import get_resnet_cbam
 from models.multimodal import get_multimodal_model
 
@@ -193,6 +196,246 @@ def plot_precision_recall_curve(labels, probabilities, save_path):
     print(f'Precision-Recall curve saved to {save_path}')
 
 
+class GradCAM:
+    """
+    Grad-CAM implementation for visualizing class activation maps.
+    
+    References:
+    - Selvaraju et al., "Grad-CAM: Visual Explanations from Deep Networks via Gradient-based Localization"
+    """
+    
+    def __init__(self, model, target_layer):
+        """
+        Initialize Grad-CAM.
+        
+        Args:
+            model: PyTorch model
+            target_layer: Target convolutional layer for visualization
+        """
+        self.model = model
+        self.target_layer = target_layer
+        self.feature_maps = None
+        self.gradient = None
+        
+        # Register hooks
+        self.hook_handles = []
+        self._register_hooks()
+    
+    def _register_hooks(self):
+        """Register forward and backward hooks to extract feature maps and gradients."""
+        # Forward hook to save feature maps
+        def forward_hook(module, input, output):
+            self.feature_maps = output.detach()
+        
+        # Backward hook to save gradients
+        def backward_hook(module, grad_in, grad_out):
+            self.gradient = grad_out[0].detach()
+        
+        # Find target layer and register hooks
+        for name, module in self.model.named_modules():
+            if name == self.target_layer:
+                self.hook_handles.append(module.register_forward_hook(forward_hook))
+                self.hook_handles.append(module.register_backward_hook(backward_hook))
+                break
+    
+    def remove_hooks(self):
+        """Remove registered hooks to clean up."""
+        for handle in self.hook_handles:
+            handle.remove()
+    
+    def __call__(self, x, class_idx=None):
+        """
+        Generate class activation map.
+        
+        Args:
+            x: Input image tensor
+            class_idx: Target class index. If None, uses the class with highest probability.
+            
+        Returns:
+            Heatmap tensor of the same spatial dimensions as the input image.
+        """
+        # Ensure model is in evaluation mode
+        self.model.eval()
+        
+        # Forward pass
+        x = x.requires_grad_()
+        output = self.model(x)
+        
+        # If class_idx is not specified, use the class with highest probability
+        if class_idx is None:
+            class_idx = output.argmax(dim=1)
+        
+        # One-hot encode the target class
+        one_hot = torch.zeros_like(output)
+        one_hot[range(len(class_idx)), class_idx] = 1
+        
+        # Zero gradients
+        self.model.zero_grad()
+        
+        # Backward pass
+        output.backward(gradient=one_hot, retain_graph=True)
+        
+        # Compute weights using global average pooling on gradients
+        weights = torch.mean(self.gradient, dim=(2, 3), keepdim=True)
+        
+        # Compute weighted sum of feature maps
+        cam = torch.sum(weights * self.feature_maps, dim=1)
+        
+        # Apply ReLU to ensure we only consider positive influences
+        cam = F.relu(cam)
+        
+        # Resize CAM to match input image size
+        cam = F.interpolate(
+            cam.unsqueeze(1),
+            size=x.shape[2:],
+            mode='bilinear',
+            align_corners=False
+        ).squeeze(1)
+        
+        # Normalize CAM
+        cam_max = torch.max(cam.view(cam.size(0), -1), dim=1)[0].view(-1, 1, 1)
+        cam = cam / (cam_max + 1e-8)
+        
+        return cam
+
+
+def visualize_grad_cam(model, image_path, device, class_names, img_size=224, target_layer='layer4.1.conv2'):
+    """
+    Generate and save Grad-CAM visualization for a single image.
+    
+    Args:
+        model: PyTorch model
+        image_path: Path to input image
+        device: Device to run inference on
+        class_names: List of class names
+        img_size: Input image size
+        target_layer: Target layer for Grad-CAM
+        
+    Returns:
+        Tuple of (predicted_class, confidence, cam_image)
+    """
+    # Image preprocessing
+    transform = transforms.Compose([
+        transforms.Resize((img_size, img_size)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                            std=[0.229, 0.224, 0.225])
+    ])
+    
+    # Load and preprocess image
+    original_image = Image.open(image_path).convert('RGB')
+    image = transform(original_image).unsqueeze(0).to(device)
+    
+    # Initialize Grad-CAM
+    grad_cam = GradCAM(model, target_layer)
+    
+    # Get model prediction
+    with torch.no_grad():
+        output = model(image)
+        probs = torch.softmax(output, dim=1)
+        confidence, predicted_class = torch.max(probs, 1)
+    
+    # Generate CAM
+    cam = grad_cam(image, predicted_class)
+    
+    # Clean up hooks
+    grad_cam.remove_hooks()
+    
+    # Convert CAM to numpy array for visualization
+    cam_np = cam.squeeze().cpu().numpy()
+    
+    # Prepare original image for visualization
+    img_np = np.array(original_image.resize((img_size, img_size)))
+    
+    # Create heatmap
+    heatmap = plt.cm.jet(cam_np)
+    heatmap = np.delete(heatmap, 3, 2)  # Remove alpha channel
+    
+    # Overlay heatmap on image
+    overlay = img_np * 0.7 + heatmap[:, :, :3] * 255 * 0.3
+    overlay = np.clip(overlay, 0, 255).astype(np.uint8)
+    
+    # Create figure with original image, heatmap, and overlay
+    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(18, 6))
+    
+    ax1.imshow(img_np)
+    ax1.set_title('Original Image')
+    ax1.axis('off')
+    
+    ax2.imshow(cam_np, cmap='jet')
+    ax2.set_title('Grad-CAM Heatmap')
+    ax2.axis('off')
+    
+    ax3.imshow(overlay)
+    ax3.set_title(f'Prediction: {class_names[predicted_class.item()]} ({confidence.item():.2f})')
+    ax3.axis('off')
+    
+    plt.tight_layout()
+    
+    return class_names[predicted_class.item()], confidence.item(), fig
+
+
+def generate_sample_visualizations(model, data_loader, device, class_names, output_dir, num_samples=10):
+    """
+    Generate Grad-CAM visualizations for sample images from the dataset.
+    
+    Args:
+        model: PyTorch model
+        data_loader: DataLoader for evaluation data
+        device: Device to run inference on
+        class_names: List of class names
+        output_dir: Directory to save visualizations
+        num_samples: Number of samples to visualize
+    """
+    # Create directory for visualizations
+    viz_dir = output_dir / 'grad_cam_visualizations'
+    viz_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Create dataset with path information
+    dataset_with_path = ChestXRayDataset(
+        data_dir=data_loader.dataset.data_dir,
+        split=data_loader.dataset.split,
+        transform=data_loader.dataset.transform,
+        return_path=True
+    )
+    
+    # Select samples (balanced between classes)
+    normal_samples = []
+    pneumonia_samples = []
+    
+    for i in range(len(dataset_with_path)):
+        _, label, path = dataset_with_path[i]
+        if label == 0 and len(normal_samples) < num_samples // 2:
+            normal_samples.append((i, path))
+        elif label == 1 and len(pneumonia_samples) < num_samples - len(normal_samples):
+            pneumonia_samples.append((i, path))
+        
+        if len(normal_samples) + len(pneumonia_samples) >= num_samples:
+            break
+    
+    all_samples = normal_samples + pneumonia_samples
+    
+    print(f'Generating Grad-CAM visualizations for {len(all_samples)} samples...')
+    
+    # Generate visualizations
+    for idx, (dataset_idx, img_path) in enumerate(all_samples):
+        try:
+            pred_class, confidence, fig = visualize_grad_cam(
+                model, img_path, device, class_names
+            )
+            
+            # Save visualization
+            save_path = viz_dir / f'grad_cam_sample_{idx}_{os.path.basename(img_path)}'
+            fig.savefig(save_path, dpi=300, bbox_inches='tight')
+            plt.close(fig)
+            
+            print(f'Saved visualization for {img_path} -> {save_path}')
+        except Exception as e:
+            print(f'Error generating visualization for {img_path}: {str(e)}')
+    
+    print(f'All visualizations saved to {viz_dir}')
+
+
 def print_metrics(metrics):
     """
     Print metrics in a readable format.
@@ -329,6 +572,13 @@ def evaluate(args):
         
         pr_file = output_dir / f'pr_curve_{args.split}.png'
         plot_precision_recall_curve(results['labels'], results['probabilities'][:, 1], pr_file)
+    
+    # Generate Grad-CAM visualizations if enabled
+    if args.generate_grad_cam:
+        print('\nGenerating Grad-CAM visualizations...')
+        generate_sample_visualizations(
+            model, data_loader, device, args.class_names, output_dir, args.num_visualizations
+        )
 
 
 def main():
@@ -361,6 +611,12 @@ def main():
     parser.add_argument('--class-names', type=str, nargs='+',
                         default=['NORMAL', 'PNEUMONIA'],
                         help='Class names (default: NORMAL PNEUMONIA)')
+    
+    # Visualization arguments
+    parser.add_argument('--generate-grad-cam', action='store_true',
+                        help='Generate Grad-CAM visualizations for lesion localization')
+    parser.add_argument('--num-visualizations', type=int, default=10,
+                        help='Number of sample visualizations to generate (default: 10)')
     
     # Output arguments
     parser.add_argument('--output-dir', type=str, default='evaluation',

@@ -1,0 +1,52 @@
+# Automated Pneumonia Detection from Chest X-Ray Images Using Advanced Deep Learning Techniques
+
+## Project Overview
+This project aims to develop an automated system for pneumonia detection from chest X-ray images using state-of-the-art deep learning techniques. The system will leverage advanced computer vision capabilities to achieve high accuracy in disease classification and localization, potentially assisting healthcare professionals in early diagnosis and treatment planning.
+
+## Methodology
+The project will implement and compare two advanced model architectures and techniques:
+
+### 1. ResNet18 with Convolutional Block Attention Module (CBAM)
+This architecture enhances the standard ResNet18 backbone by incorporating attention mechanisms that can focus on clinically relevant regions in X-ray images. The CBAM consists of:
+- Channel Attention: Learning to emphasize important feature channels
+- Spatial Attention: Identifying disease-relevant regions within the image
+
+### 2. Weakly Supervised Lesion Localization
+This innovative approach extends the classification model to provide localization capabilities:
+- Grad-CAM implementation to generate class activation maps
+- Visualization of disease-specific regions that influenced the classification decision
+- Enables explainability of model predictions without requiring pixel-level annotations
+- Provides visual support for clinicians to validate model decisions
+
+## Dataset
+The project will utilize the publicly available "Chest X-Ray Images (Pneumonia)" dataset from Kaggle, containing:
+- ~5,000 training images
+- ~16 validation images
+- ~624 test images
+- Binary classification: NORMAL vs. PNEUMONIA
+
+## Implementation Details
+The solution will be implemented in PyTorch with the following components:
+- Data preprocessing pipeline with image augmentation
+- Modular model architectures for easy experimentation
+- Comprehensive evaluation metrics (accuracy, precision, recall, F1-score, ROC-AUC)
+- Cross-validation to ensure model robustness
+- TensorBoard integration for training visualization
+- Grad-CAM implementation for lesion localization visualization
+
+## Expected Outcomes
+- Development of an accurate pneumonia classification system
+- Implementation of attention mechanisms to improve feature extraction
+- Creation of class activation maps to visualize disease regions
+- Comparative analysis of model performance with and without attention mechanisms
+- Visualization tools to support clinical decision-making
+
+## Technical Significance
+This project addresses the critical need for automated medical image analysis tools that can assist in rapid and accurate disease diagnosis. By implementing weakly supervised localization techniques, it enhances model explainability, which is crucial for clinical adoption of AI systems. The attention mechanisms further improve the model's ability to focus on clinically relevant image regions.
+
+## Timeline
+- Week 1-2: Data exploration and preprocessing
+- Week 3-4: Implementation of ResNet18+CBAM model
+- Week 5-6: Development of weakly supervised localization with Grad-CAM
+- Week 7-8: Training, evaluation, and result analysis
+- Week 9-10: Documentation and presentation preparation
