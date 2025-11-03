@@ -3,17 +3,17 @@
 A PyTorch deep learning project for automated pneumonia detection from chest X-ray images. This project implements state-of-the-art computer vision techniques including:
 
 - **ResNet18 with CBAM** (Convolutional Block Attention Module) for enhanced feature extraction
-- **Multimodal Learning** combining vision and text (BERT) for improved classification
-- **Text-Guided Weakly Supervised Learning** for leveraging radiology reports
+- **Grad-CAM Visualization** for weakly supervised lesion localization and model interpretability
 
 ## Features
 
-- 🔬 Multiple model architectures (ResNet18+CBAM, Multimodal)
+- 🔬 Advanced attention mechanisms (ResNet18+CBAM)
+- 🎯 **Weakly supervised lesion localization using Grad-CAM**
 - 📊 Comprehensive evaluation metrics (accuracy, precision, recall, F1-score, ROC-AUC)
 - 📓 Interactive Jupyter notebooks for exploration and training
 - 🖥️ CLI-based training scripts for production workflows
 - 📈 TensorBoard integration for training visualization
-- 🎯 MONAI integration for medical imaging preprocessing
+- 🔍 **Model interpretability** through class activation maps
 - 💻 **Cross-platform support**: Works on Linux, macOS, and Windows (cmd/PowerShell)
 
 ## Project Structure
@@ -28,9 +28,9 @@ Chest-X-Ray-Pneumonia-Classification/
 │   ├── data.py                   # Data loading and preprocessing
 │   ├── train.py                  # CLI training script
 │   ├── evaluate.py               # Model evaluation script
+│   ├── demo_grad_cam.py          # Grad-CAM visualization demo
 │   └── models/
-│       ├── resnet_cbam.py        # ResNet18 + CBAM implementation
-│       └── multimodal.py         # Multimodal vision-text fusion
+│       └── resnet_cbam.py        # ResNet18 + CBAM implementation
 ├── requirements.txt              # Python dependencies
 ├── .gitignore                    # Git ignore file
 └── README.md                     # This file
@@ -181,49 +181,47 @@ python src/train.py `
     --class-weights
 ```
 
-#### Train Multimodal Model
-
-```bash
-# Linux/macOS
-python src/train.py \
-    --data-dir data/chest_xray \
-    --model multimodal \
-    --fusion-method concat \
-    --epochs 50 \
-    --batch-size 16 \
-    --lr 0.0001 \
-    --output-dir checkpoints/multimodal
-```
-
-```cmd
-# Windows (cmd)
-python src/train.py --data-dir data/chest_xray --model multimodal --fusion-method concat --epochs 50 --batch-size 16 --lr 0.0001 --output-dir checkpoints/multimodal
-```
-
-```powershell
-# Windows (PowerShell)
-python src/train.py `
-    --data-dir data/chest_xray `
-    --model multimodal `
-    --fusion-method concat `
-    --epochs 50 `
-    --batch-size 16 `
-    --lr 0.0001 `
-    --output-dir checkpoints/multimodal
-```
-
 #### Training Arguments
 
 - `--data-dir`: Path to dataset directory
-- `--model`: Model architecture (`resnet_cbam` or `multimodal`)
+- `--model`: Model architecture (currently only `resnet_cbam` is supported)
 - `--epochs`: Number of training epochs
 - `--batch-size`: Batch size for training
 - `--lr`: Learning rate
 - `--img-size`: Input image size (default: 224)
-- `--num-workers`: Number of data loading workers
+- `--num-workers`: Number of data loading workers (set to 0 for Windows)
 - `--output-dir`: Directory to save checkpoints and logs
 - `--class-weights`: Use class weights for imbalanced dataset
-- `--fusion-method`: Fusion method for multimodal (`concat`, `add`, or `attention`)
+
+### Grad-CAM Visualization
+
+Generate class activation maps to visualize where the model focuses its attention:
+
+```bash
+# Linux/macOS
+python src/demo_grad_cam.py \
+    --checkpoint checkpoints/resnet_cbam/best_model.pth \
+    --image-path data/chest_xray/test/PNEUMONIA/person1_virus_6.jpeg \
+    --output-dir grad_cam_demo
+```
+
+```cmd
+# Windows (cmd)
+python src/demo_grad_cam.py --checkpoint checkpoints/resnet_cbam/best_model.pth --image-path data/chest_xray/test/PNEUMONIA/person1_virus_6.jpeg --output-dir grad_cam_demo
+```
+
+```powershell
+# Windows (PowerShell)
+python src/demo_grad_cam.py `
+    --checkpoint checkpoints/resnet_cbam/best_model.pth `
+    --image-path data/chest_xray/test/PNEUMONIA/person1_virus_6.jpeg `
+    --output-dir grad_cam_demo
+```
+
+This will generate visualizations showing:
+- Original X-ray image
+- Grad-CAM heatmap
+- Overlayed visualization highlighting potential lesion regions
 
 ### Evaluation
 
@@ -279,20 +277,22 @@ tensorboard --logdir checkpoints/resnet_cbam/logs
 
 ### ResNet18 + CBAM
 
+### ResNet18 + CBAM
+
 Combines ResNet18 backbone with Convolutional Block Attention Module (CBAM):
 - **Channel Attention**: Learns "what" features to focus on
 - **Spatial Attention**: Learns "where" to focus in the image
 - Pretrained on ImageNet for better feature extraction
+- Achieves strong performance on pneumonia classification
 
-### Multimodal Model
+### Grad-CAM for Weakly Supervised Localization
 
-Fuses visual and textual information:
-- **Vision Encoder**: ResNet18 + CBAM for image features
-- **Text Encoder**: BERT for processing radiology reports
-- **Fusion Methods**: 
-  - Concatenation: Simple feature concatenation
-  - Addition: Element-wise addition of features
-  - Attention: Cross-attention mechanism
+Uses Gradient-weighted Class Activation Mapping to visualize model decisions:
+- **No pixel-level annotations needed**: Only requires image-level labels (NORMAL/PNEUMONIA)
+- **Highlights disease regions**: Shows where the model focuses attention
+- **Interpretable AI**: Provides visual explanations for predictions
+- **Clinical validation**: Allows doctors to verify if the model is looking at the right regions
+- **Target layer**: Typically uses the last convolutional layer (layer4) for best visualization
 
 ## Dataset
 
@@ -307,9 +307,9 @@ Dataset source: [Kaggle - Chest X-Ray Images (Pneumonia)](https://www.kaggle.com
 ## Results
 
 Expected performance (ResNet18 + CBAM):
-- **Accuracy**: ~90%+
-- **Precision**: ~88%+
-- **Recall**: ~92%+
+- **Accuracy**: ~85%+
+- **Precision (NORMAL)**: ~92%+
+- **Recall (PNEUMONIA)**: ~96%+
 - **ROC-AUC**: ~0.95+
 
 *Note: Actual results may vary based on hyperparameters and training settings.*

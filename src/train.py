@@ -16,7 +16,6 @@ import numpy as np
 
 from data import get_data_loaders, ChestXRayDataset
 from models.resnet_cbam import get_resnet_cbam
-from models.multimodal import get_multimodal_model
 
 
 def train_epoch(model, train_loader, criterion, optimizer, device, epoch, writer=None):
@@ -168,14 +167,8 @@ def train(args):
     print(f'Creating {args.model} model...')
     if args.model == 'resnet_cbam':
         model = get_resnet_cbam(num_classes=args.num_classes, pretrained=args.pretrained)
-    elif args.model == 'multimodal':
-        model = get_multimodal_model(
-            num_classes=args.num_classes,
-            pretrained_vision=args.pretrained,
-            fusion_method=args.fusion_method
-        )
     else:
-        raise ValueError(f'Unknown model: {args.model}')
+        raise ValueError(f'Unknown model: {args.model}. Only "resnet_cbam" is supported.')
     
     model = model.to(device)
     
@@ -452,15 +445,12 @@ def main():
     
     # Model arguments
     parser.add_argument('--model', type=str, default='resnet_cbam',
-                        choices=['resnet_cbam', 'multimodal'],
+                        choices=['resnet_cbam'],
                         help='Model architecture (default: resnet_cbam)')
     parser.add_argument('--num-classes', type=int, default=2,
                         help='Number of classes (default: 2)')
     parser.add_argument('--pretrained', action='store_true', default=True,
                         help='Use pretrained weights (default: True)')
-    parser.add_argument('--fusion-method', type=str, default='concat',
-                        choices=['concat', 'add', 'attention'],
-                        help='Fusion method for multimodal model (default: concat)')
     
     # Training arguments
     parser.add_argument('--epochs', type=int, default=50,

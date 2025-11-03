@@ -26,7 +26,6 @@ from torchvision import transforms
 
 from data import get_data_loaders, ChestXRayDataset
 from models.resnet_cbam import get_resnet_cbam
-from models.multimodal import get_multimodal_model
 
 
 def evaluate_model(model, data_loader, device, class_names=['NORMAL', 'PNEUMONIA']):
@@ -515,14 +514,8 @@ def evaluate(args):
     print(f'Loading {args.model} model...')
     if args.model == 'resnet_cbam':
         model = get_resnet_cbam(num_classes=args.num_classes, pretrained=False)
-    elif args.model == 'multimodal':
-        model = get_multimodal_model(
-            num_classes=args.num_classes,
-            pretrained_vision=False,
-            fusion_method=args.fusion_method
-        )
     else:
-        raise ValueError(f'Unknown model: {args.model}')
+        raise ValueError(f'Unknown model: {args.model}. Only "resnet_cbam" is supported.')
     
     # Load checkpoint
     checkpoint = torch.load(args.checkpoint, map_location=device)
@@ -599,15 +592,12 @@ def main():
     
     # Model arguments
     parser.add_argument('--model', type=str, required=True,
-                        choices=['resnet_cbam', 'multimodal'],
+                        choices=['resnet_cbam'],
                         help='Model architecture')
     parser.add_argument('--checkpoint', type=str, required=True,
                         help='Path to model checkpoint')
     parser.add_argument('--num-classes', type=int, default=2,
                         help='Number of classes (default: 2)')
-    parser.add_argument('--fusion-method', type=str, default='concat',
-                        choices=['concat', 'add', 'attention'],
-                        help='Fusion method for multimodal model (default: concat)')
     parser.add_argument('--class-names', type=str, nargs='+',
                         default=['NORMAL', 'PNEUMONIA'],
                         help='Class names (default: NORMAL PNEUMONIA)')
