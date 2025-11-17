@@ -27,12 +27,24 @@ Chest-X-Ray-Pneumonia-Classification/
 ├── src/
 │   ├── data.py                   # Data loading and preprocessing
 │   ├── train.py                  # CLI training script
-│   ├── evaluate.py               # Model evaluation script
-│   ├── demo_grad_cam.py          # Grad-CAM visualization demo
+│   ├── evaluate.py               # Model evaluation with Grad-CAM
 │   └── models/
 │       └── resnet_cbam.py        # ResNet18 + CBAM implementation
+├── evaluation/                   # Generated evaluation results
+│   └── resnet_cbam/
+│       ├── metrics_test.json     # Performance metrics
+│       ├── confusion_matrix.png  # Confusion matrix visualization
+│       ├── roc_curve.png         # ROC curve
+│       ├── pr_curve.png          # Precision-Recall curve
+│       └── grad_cam_samples/     # Grad-CAM visualization samples
+├── checkpoints/                  # Model checkpoints (generated during training)
+│   └── resnet_cbam/
+│       ├── best_model.pth        # Best model based on validation accuracy
+│       └── logs/                 # TensorBoard logs
 ├── requirements.txt              # Python dependencies
 ├── .gitignore                    # Git ignore file
+├── CREATIVE_FUNCTIONS.md         # Detailed explanation of creative functions
+├── GRAD_CAM_GUIDE.md             # Practical Grad-CAM usage guide
 └── README.md                     # This file
 ```
 
@@ -193,36 +205,6 @@ python src/train.py `
 - `--output-dir`: Directory to save checkpoints and logs
 - `--class-weights`: Use class weights for imbalanced dataset
 
-### Grad-CAM Visualization
-
-Generate class activation maps to visualize where the model focuses its attention:
-
-```bash
-# Linux/macOS
-python src/demo_grad_cam.py \
-    --checkpoint checkpoints/resnet_cbam/best_model.pth \
-    --image-path data/chest_xray/test/PNEUMONIA/person1_virus_6.jpeg \
-    --output-dir grad_cam_demo
-```
-
-```cmd
-# Windows (cmd)
-python src/demo_grad_cam.py --checkpoint checkpoints/resnet_cbam/best_model.pth --image-path data/chest_xray/test/PNEUMONIA/person1_virus_6.jpeg --output-dir grad_cam_demo
-```
-
-```powershell
-# Windows (PowerShell)
-python src/demo_grad_cam.py `
-    --checkpoint checkpoints/resnet_cbam/best_model.pth `
-    --image-path data/chest_xray/test/PNEUMONIA/person1_virus_6.jpeg `
-    --output-dir grad_cam_demo
-```
-
-This will generate visualizations showing:
-- Original X-ray image
-- Grad-CAM heatmap
-- Overlayed visualization highlighting potential lesion regions
-
 ### Evaluation
 
 Evaluate a trained model:
@@ -235,11 +217,12 @@ python src/evaluate.py \
     --checkpoint checkpoints/resnet_cbam/best_model.pth \
     --split test \
     --output-dir evaluation/resnet_cbam
+    --generate-grad-cam
 ```
 
 ```cmd
 # Windows (cmd)
-python src/evaluate.py --data-dir data/chest_xray --model resnet_cbam --checkpoint checkpoints/resnet_cbam/best_model.pth --split test --output-dir evaluation/resnet_cbam
+python src/evaluate.py --data-dir data/chest_xray --model resnet_cbam --checkpoint checkpoints/resnet_cbam/best_model.pth --split test --output-dir evaluation/resnet_cbam --generate-grad-cam
 ```
 
 ```powershell
@@ -249,15 +232,39 @@ python src/evaluate.py `
     --model resnet_cbam `
     --checkpoint checkpoints/resnet_cbam/best_model.pth `
     --split test `
-    --output-dir evaluation/resnet_cbam
+    --output-dir evaluation/resnet_cbam `
+    --generate-grad-cam
 ```
 
 This will generate:
-- Classification metrics (accuracy, precision, recall, F1-score)
-- Confusion matrix visualization
-- ROC curve
-- Precision-Recall curve
-- Metrics saved to JSON
+- **Classification Report**: Detailed metrics for each class
+- **Confusion Matrix**: Visual representation saved as `confusion_matrix.png`
+- **ROC Curve**: Receiver Operating Characteristic curve saved as `roc_curve.png`
+- **Precision-Recall Curve**: PR curve saved as `pr_curve.png`
+- **Metrics JSON**: All metrics saved to `metrics_test.json`
+- **Grad-CAM Visualizations**: Sample heatmaps saved in `grad_cam_samples/` folder
+
+### Grad-CAM Visualization
+
+The `--generate-grad-cam` flag enables weakly supervised lesion localization:
+- Generates heatmaps showing where the model focuses attention
+- Saves visualizations for randomly selected samples from each class
+- Helps validate that the model is learning clinically relevant features
+- Provides interpretability for medical professionals
+
+Example Grad-CAM output structure:
+```
+evaluation/resnet_cbam/grad_cam_samples/
+├── sample_0_NORMAL_IM-0001-0001.jpeg_cam.png
+├── sample_1_NORMAL_IM-0003-0001.jpeg_cam.png
+├── sample_5_PNEUMONIA_person1_bacteria_1.jpeg_cam.png
+└── ...
+```
+
+Each visualization shows:
+1. Original X-ray image
+2. Grad-CAM heatmap
+3. Overlay of heatmap on original image
 
 ### Monitoring Training
 
@@ -275,24 +282,55 @@ tensorboard --logdir checkpoints/resnet_cbam/logs
 
 ## Model Architectures
 
-### ResNet18 + CBAM
+### ResNet18 + CBAM (Our Implementation)
 
-### ResNet18 + CBAM
+Our model combines the ResNet18 backbone with Convolutional Block Attention Module (CBAM) for enhanced feature extraction:
 
-Combines ResNet18 backbone with Convolutional Block Attention Module (CBAM):
-- **Channel Attention**: Learns "what" features to focus on
-- **Spatial Attention**: Learns "where" to focus in the image
-- Pretrained on ImageNet for better feature extraction
-- Achieves strong performance on pneumonia classification
+#### Architecture Overview
+- **Backbone**: ResNet18 pretrained on ImageNet
+- **Attention Module**: CBAM applied after each residual block (layer1-4)
+- **Input**: 224×224 RGB chest X-ray images
+- **Output**: Binary classification (NORMAL vs. PNEUMONIA)
+
+#### CBAM Components
+1. **Channel Attention**: 
+   - Uses both average and max pooling
+   - Learns "what" features are important
+   - Reduction ratio: 16 (configurable)
+   
+2. **Spatial Attention**: 
+   - Uses 7×7 convolution
+   - Learns "where" to focus in the image
+   - Highlights disease-relevant regions
+
+#### Why This Architecture?
+✅ **Transfer Learning**: ImageNet pretraining provides robust low-level features  
+✅ **Attention Mechanisms**: CBAM helps focus on clinically relevant regions  
+✅ **Proven Performance**: Achieves 84.94% accuracy with 96.41% pneumonia recall  
+✅ **Interpretability**: Compatible with Grad-CAM for visualization  
 
 ### Grad-CAM for Weakly Supervised Localization
 
-Uses Gradient-weighted Class Activation Mapping to visualize model decisions:
-- **No pixel-level annotations needed**: Only requires image-level labels (NORMAL/PNEUMONIA)
-- **Highlights disease regions**: Shows where the model focuses attention
-- **Interpretable AI**: Provides visual explanations for predictions
-- **Clinical validation**: Allows doctors to verify if the model is looking at the right regions
-- **Target layer**: Typically uses the last convolutional layer (layer4) for best visualization
+Gradient-weighted Class Activation Mapping (Grad-CAM) provides model interpretability:
+
+#### How It Works
+1. **Forward Pass**: Image through the network
+2. **Target Selection**: Focus on predicted class
+3. **Gradient Computation**: Backpropagate to target convolutional layer
+4. **Weight Calculation**: Global average pooling of gradients
+5. **Heatmap Generation**: Weighted combination of feature maps
+6. **Visualization**: Overlay heatmap on original image
+
+#### Benefits
+- ✅ **No Additional Labels**: Only requires image-level classification labels
+- ✅ **Visual Explanation**: Shows where the model "looks" for pneumonia
+- ✅ **Clinical Validation**: Doctors can verify if the model focuses on correct regions
+- ✅ **Error Analysis**: Helps identify model weaknesses
+- ✅ **Trust Building**: Increases confidence in AI predictions
+
+#### Target Layer
+- **Default**: `layer4.1.conv2` (last convolutional layer before pooling)
+- **Why**: Provides the best balance between spatial resolution and semantic information
 
 ## Dataset
 
@@ -306,36 +344,68 @@ Dataset source: [Kaggle - Chest X-Ray Images (Pneumonia)](https://www.kaggle.com
 
 ## Results
 
-Expected performance (ResNet18 + CBAM):
-- **Accuracy**: ~85%+
-- **Precision (NORMAL)**: ~92%+
-- **Recall (PNEUMONIA)**: ~96%+
-- **ROC-AUC**: ~0.95+
+### Performance Metrics (ResNet18 + CBAM)
 
-*Note: Actual results may vary based on hyperparameters and training settings.*
+Our model achieved the following performance on the test set:
 
-## Citation
+#### Overall Performance
+- **Accuracy**: **84.94%**
+- **ROC-AUC**: **0.928** (Excellent discrimination ability)
+- **Average Precision**: **0.949** (High precision across all recall levels)
 
-If you use this project in your research, please cite:
+#### Per-Class Performance
 
-```bibtex
-@software{chest_xray_pneumonia_classification,
-  title = {Chest X-Ray Pneumonia Classification},
-  author = {Leoxenon},
-  year = {2025},
-  url = {https://github.com/Leoxenon/Chest-X-Ray-Pneumonia-Classification}
-}
-```
+| Metric | NORMAL | PNEUMONIA |
+|--------|--------|-----------|
+| **Precision** | 91.67% | 82.46% |
+| **Recall** | 65.81% | **96.41%** |
+| **F1-Score** | 76.62% | 88.89% |
+| **Support** | 234 | 390 |
+
+#### Key Insights
+
+✅ **High Sensitivity (96.41% recall for PNEUMONIA)**: The model successfully detects pneumonia cases, which is critical in medical diagnosis to minimize false negatives.
+
+✅ **Strong Specificity (91.67% precision for NORMAL)**: When the model predicts NORMAL, it's highly reliable.
+
+✅ **Excellent ROC-AUC (0.928)**: Demonstrates strong discriminative ability between classes across different threshold settings.
+
+✅ **Clinical Relevance**: The high recall for pneumonia (96.41%) means only 3.59% of pneumonia cases are missed, which is crucial for patient safety.
+
+#### Confusion Matrix Analysis
+
+|  | Predicted NORMAL | Predicted PNEUMONIA |
+|---|---|---|
+| **True NORMAL** | 154 | 80 |
+| **True PNEUMONIA** | 14 | 376 |
+
+- **True Positives (Pneumonia)**: 376 cases correctly identified
+- **False Negatives (Missed Pneumonia)**: Only 14 cases (3.59% miss rate)
+- **True Negatives (Normal)**: 154 cases correctly identified
+- **False Positives (Over-diagnosis)**: 80 cases
+
+### Visualizations
+
+The evaluation generates comprehensive visualizations including:
+- **Confusion Matrix**: Shows the distribution of predictions vs. actual labels
+- **ROC Curve**: Demonstrates the trade-off between sensitivity and specificity
+- **Precision-Recall Curve**: Useful for imbalanced datasets like ours
+- **Grad-CAM Heatmaps**: Highlights the regions the model focuses on for each prediction
+
+*All metrics and visualizations can be reproduced by running the evaluation script with your trained model.*
+
 
 ## References
 
-- CBAM: Woo, S., Park, J., Lee, J. Y., & Kweon, I. S. (2018). "CBAM: Convolutional Block Attention Module"
-- ResNet: He, K., Zhang, X., Ren, S., & Sun, J. (2016). "Deep Residual Learning for Image Recognition"
-- BERT: Devlin, J., et al. (2019). "BERT: Pre-training of Deep Bidirectional Transformers"
+### Academic Papers
+- **CBAM**: Woo, S., Park, J., Lee, J. Y., & Kweon, I. S. (2018). "CBAM: Convolutional Block Attention Module". ECCV 2018.
+- **ResNet**: He, K., Zhang, X., Ren, S., & Sun, J. (2016). "Deep Residual Learning for Image Recognition". CVPR 2016.
+- **Grad-CAM**: Selvaraju, R. R., et al. (2017). "Grad-CAM: Visual Explanations from Deep Networks via Gradient-based Localization". ICCV 2017.
 
-## License
+### Dataset
+- Kermany, D., Zhang, K., & Goldbaum, M. (2018). "Labeled Optical Coherence Tomography (OCT) and Chest X-Ray Images for Classification". Mendeley Data, v2.
+- [Kaggle Dataset Link](https://www.kaggle.com/datasets/paultimothymooney/chest-xray-pneumonia)
 
-This project is available under the MIT License. See LICENSE file for details.
 
 ## Contributing
 
