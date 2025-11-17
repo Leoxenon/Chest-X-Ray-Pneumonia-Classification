@@ -11,10 +11,8 @@ import torch.optim as optim
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 import json
-import matplotlib.pyplot as plt
-import numpy as np
 
-from data import get_data_loaders, ChestXRayDataset
+from data import get_data_loaders
 from models.resnet_cbam import get_resnet_cbam
 
 
@@ -144,8 +142,6 @@ def train(args):
     # Create directories
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-    visualizations_dir = output_dir / 'visualizations'
-    visualizations_dir.mkdir(exist_ok=True)
     
     # Setup TensorBoard
     writer = SummaryWriter(log_dir=os.path.join(args.output_dir, 'logs'))
@@ -236,14 +232,6 @@ def train(args):
                 'val_acc': val_acc,
                 'val_loss': val_loss,
             }, checkpoint_path)
-            
-        # Generate periodic visualizations if enabled
-        if hasattr(args, 'generate_periodic_visualizations') and args.generate_periodic_visualizations and epoch % args.visualization_interval == 0:
-            print(f'\nGenerating visualizations for epoch {epoch}...')
-            generate_training_visualizations(
-                model, val_loader, device, visualizations_dir, epoch,
-                args.num_visualizations_per_epoch
-            )
     
     # Save final model
     final_model_path = output_dir / 'final_model.pth'
@@ -262,172 +250,6 @@ def train(args):
     writer.close()
     print(f'\nTraining completed! Best validation accuracy: {best_val_acc:.2f}%')
     print(f'Model saved to: {best_model_path}')
-
-
-def generate_training_visualizations(model, val_loader, device, output_dir, epoch, num_samples=5):
-    """
-    Generate Grad-CAM visualizations during training to monitor model learning.
-    
-    Args:
-        model: PyTorch model
-        val_loader: Validation data loader
-        device: Device to run inference on
-        output_dir: Directory to save visualizations
-        epoch: Current epoch number
-        num_samples: Number of samples to visualize
-    """
-    # Create directory for current epoch visualizations
-    epoch_dir = output_dir / f'epoch_{epoch}'
-    epoch_dir.mkdir(parents=True, exist_ok=True)
-    
-    # Create dataset with path information
-    dataset_with_path = ChestXRayDataset(
-        data_dir=val_loader.dataset.data_dir,
-        split=val_loader.dataset.split,
-        transform=val_loader.dataset.transform,
-        return_path=True
-    )
-    
-    # Select samples (balanced between classes)
-    normal_samples = []
-    pneumonia_samples = []
-    
-    for i in range(len(dataset_with_path)):
-        _, label, path = dataset_with_path[i]
-        if label == 0 and len(normal_samples) < num_samples // 2:
-            normal_samples.append((i, path))
-        elif label == 1 and len(pneumonia_samples) < num_samples - len(normal_samples):
-            pneumonia_samples.append((i, path))
-        
-        if len(normal_samples) + len(pneumonia_samples) >= num_samples:
-            break
-    
-    all_samples = normal_samples + pneumonia_samples
-    
-    # Generate Grad-CAM visualizations
-    for idx, (dataset_idx, img_path) in enumerate(all_samples):
-        try:
-            # Simple Grad-CAM implementation
-            import torch.nn.functional as F
-            from PIL import Image
-            from torchvision import transforms
-            
-            # Image preprocessing
-            transform = transforms.Compose([
-                transforms.Resize((val_loader.dataset.transform.transforms[0].size[0], 
-                                 val_loader.dataset.transform.transforms[0].size[1])),
-                transforms.ToTensor(),
-                transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                    std=[0.229, 0.224, 0.225])
-            ])
-            
-            # Load and preprocess image
-            original_image = Image.open(img_path).convert('RGB')
-            image = transform(original_image).unsqueeze(0).to(device)
-            
-            # Define target layer for visualization
-            target_layer = None
-            for name, module in model.named_modules():
-                if isinstance(module, nn.Conv2d) and 'layer4' in name:
-                    target_layer = name
-                    break
-            
-            if not target_layer:
-                print(f'Could not find suitable target layer for Grad-CAM')
-                continue
-            
-            # Register hooks
-            feature_maps = None
-            gradients = None
-            
-            def forward_hook(module, input, output):
-                nonlocal feature_maps
-                feature_maps = output.detach()
-            
-            def backward_hook(module, grad_in, grad_out):
-                nonlocal gradients
-                gradients = grad_out[0].detach()
-            
-            hook_handles = []
-            for name, module in model.named_modules():
-                if name == target_layer:
-                    hook_handles.append(module.register_forward_hook(forward_hook))
-                    hook_handles.append(module.register_backward_hook(backward_hook))
-                    break
-            
-            # Forward pass
-            model.eval()
-            image.requires_grad_()
-            output = model(image)
-            _, predicted = output.max(1)
-            
-            # Backward pass
-            one_hot = torch.zeros_like(output)
-            one_hot[0, predicted.item()] = 1
-            model.zero_grad()
-            output.backward(gradient=one_hot, retain_graph=True)
-            
-            # Clean up hooks
-            for handle in hook_handles:
-                handle.remove()
-            
-            # Compute weights and generate CAM
-            weights = torch.mean(gradients, dim=(2, 3), keepdim=True)
-            cam = torch.sum(weights * feature_maps, dim=1)
-            cam = F.relu(cam)
-            
-            # Resize CAM
-            cam = F.interpolate(
-                cam.unsqueeze(1),
-                size=image.shape[2:],
-                mode='bilinear',
-                align_corners=False
-            ).squeeze(1)
-            
-            # Normalize
-            cam_max = torch.max(cam)
-            if cam_max > 0:
-                cam = cam / cam_max
-            
-            # Convert to numpy for visualization
-            cam_np = cam.squeeze().cpu().numpy()
-            img_np = np.array(original_image.resize((image.shape[3], image.shape[2])))
-            
-            # Create heatmap
-            heatmap = plt.cm.jet(cam_np)
-            if heatmap.shape[2] == 4:
-                heatmap = np.delete(heatmap, 3, 2)  # Remove alpha channel
-            
-            # Overlay heatmap
-            overlay = img_np * 0.7 + heatmap[:, :, :3] * 255 * 0.3
-            overlay = np.clip(overlay, 0, 255).astype(np.uint8)
-            
-            # Create figure
-            fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(18, 6))
-            
-            ax1.imshow(img_np)
-            ax1.set_title('Original Image')
-            ax1.axis('off')
-            
-            ax2.imshow(cam_np, cmap='jet')
-            ax2.set_title('Grad-CAM Heatmap')
-            ax2.axis('off')
-            
-            ax3.imshow(overlay)
-            ax3.set_title(f'Prediction: {predicted.item()}')
-            ax3.axis('off')
-            
-            plt.tight_layout()
-            
-            # Save visualization
-            save_path = epoch_dir / f'sample_{idx}_{os.path.basename(img_path)}'
-            plt.savefig(save_path, dpi=200, bbox_inches='tight')
-            plt.close(fig)
-            
-        except Exception as e:
-            print(f'Error generating visualization for {img_path}: {str(e)}')
-    
-    print(f'Epoch {epoch} visualizations saved to {epoch_dir}')
 
 
 def main():
@@ -461,14 +283,6 @@ def main():
                         help='Weight decay (default: 1e-4)')
     parser.add_argument('--class-weights', action='store_true',
                         help='Use class weights for imbalanced dataset')
-    
-    # Visualization arguments
-    parser.add_argument('--generate-periodic-visualizations', action='store_true',
-                        help='Generate Grad-CAM visualizations during training')
-    parser.add_argument('--visualization-interval', type=int, default=10,
-                        help='Generate visualizations every N epochs (default: 10)')
-    parser.add_argument('--num-visualizations-per-epoch', type=int, default=5,
-                        help='Number of samples to visualize per epoch (default: 5)')
     
     # Output arguments
     parser.add_argument('--output-dir', type=str, default='checkpoints',
