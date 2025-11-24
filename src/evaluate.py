@@ -26,6 +26,7 @@ from torchvision import transforms
 
 from data import get_data_loaders, ChestXRayDataset
 from models.resnet_cbam import get_resnet_cbam
+from models.custom_resnet_cbam import get_custom_resnet_cbam
 
 
 def evaluate_model(model, data_loader, device, class_names=['NORMAL', 'PNEUMONIA']):
@@ -514,8 +515,10 @@ def evaluate(args):
     print(f'Loading {args.model} model...')
     if args.model == 'resnet_cbam':
         model = get_resnet_cbam(num_classes=args.num_classes, pretrained=False)
+    elif args.model == 'custom_resnet_cbam':
+        model = get_custom_resnet_cbam(num_classes=args.num_classes)
     else:
-        raise ValueError(f'Unknown model: {args.model}. Only "resnet_cbam" is supported.')
+        raise ValueError(f'Unknown model: {args.model}. Supported models: "resnet_cbam", "custom_resnet_cbam"')
     
     # Load checkpoint
     checkpoint = torch.load(args.checkpoint, map_location=device)
@@ -592,8 +595,8 @@ def main():
     
     # Model arguments
     parser.add_argument('--model', type=str, required=True,
-                        choices=['resnet_cbam'],
-                        help='Model architecture')
+                        choices=['resnet_cbam', 'custom_resnet_cbam'],
+                        help='Model architecture. Options: resnet_cbam (pretrained), custom_resnet_cbam (from scratch)')
     parser.add_argument('--checkpoint', type=str, required=True,
                         help='Path to model checkpoint')
     parser.add_argument('--num-classes', type=int, default=2,

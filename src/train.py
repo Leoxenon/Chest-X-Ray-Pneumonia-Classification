@@ -14,6 +14,7 @@ import json
 
 from data import get_data_loaders
 from models.resnet_cbam import get_resnet_cbam
+from models.custom_resnet_cbam import get_custom_resnet_cbam
 
 
 def train_epoch(model, train_loader, criterion, optimizer, device, epoch, writer=None):
@@ -163,8 +164,13 @@ def train(args):
     print(f'Creating {args.model} model...')
     if args.model == 'resnet_cbam':
         model = get_resnet_cbam(num_classes=args.num_classes, pretrained=args.pretrained)
+    elif args.model == 'custom_resnet_cbam':
+        if args.pretrained:
+            print("Warning: Custom ResNet18-CBAM doesn't support pretrained weights.")
+            print("Training from scratch with He initialization...")
+        model = get_custom_resnet_cbam(num_classes=args.num_classes)
     else:
-        raise ValueError(f'Unknown model: {args.model}. Only "resnet_cbam" is supported.')
+        raise ValueError(f'Unknown model: {args.model}. Supported models: "resnet_cbam", "custom_resnet_cbam"')
     
     model = model.to(device)
     
@@ -267,12 +273,13 @@ def main():
     
     # Model arguments
     parser.add_argument('--model', type=str, default='resnet_cbam',
-                        choices=['resnet_cbam'],
-                        help='Model architecture (default: resnet_cbam)')
+                        choices=['resnet_cbam', 'custom_resnet_cbam'],
+                        help='Model architecture (default: resnet_cbam). '
+                             'Options: resnet_cbam (pretrained), custom_resnet_cbam (from scratch)')
     parser.add_argument('--num-classes', type=int, default=2,
                         help='Number of classes (default: 2)')
     parser.add_argument('--pretrained', action='store_true', default=True,
-                        help='Use pretrained weights (default: True)')
+                        help='Use pretrained weights (only for resnet_cbam, default: True)')
     
     # Training arguments
     parser.add_argument('--epochs', type=int, default=50,

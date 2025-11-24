@@ -109,3 +109,6 @@ kaggle.json
 # Compiled files
 *.pyc
 *.pyo
+
+# pdf files
+*.pdf

@@ -1,5 +1,5 @@
 """
-ResNet18 with CBAM (Convolutional Block Attention Module) for pneumonia classification.
+ResNet18 with CBAM (Using Pretrained ResNet18 for Better Performance).
 """
 
 import torch
