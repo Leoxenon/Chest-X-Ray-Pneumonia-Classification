@@ -28,22 +28,39 @@ Chest-X-Ray-Pneumonia-Classification/
 │   └── train_notebook.ipynb      # Interactive training notebook
 ├── src/
 │   ├── data.py                   # Data loading and preprocessing
-│   ├── train.py                  # CLI training script
+│   ├── train.py                  # CLI training script (supports all models)
 │   ├── evaluate.py               # Model evaluation with Grad-CAM
 │   └── models/
-│       ├── resnet_cbam.py        # ResNet18 + CBAM (pretrained backbone)
-│       └── custom_resnet_cbam.py # Custom ResNet18 + CBAM (from scratch)
+│       ├── resnet_cbam.py        # ResNet18 + CBAM (pretrained backbone) 
+│       ├── custom_resnet_cbam.py # Custom ResNet18 + CBAM (from scratch)
+│       ├── plain_resnet18.py     # Plain ResNet18 (no CBAM) - Baseline
+│       ├── alexnet.py            # AlexNet (2012) - Historical baseline
+│       └── vgg16.py              # VGG16 (2014) - Historical baseline
 ├── evaluation/                   # Generated evaluation results
-│   └── resnet_cbam/
-│       ├── metrics_test.json     # Performance metrics
-│       ├── confusion_matrix.png  # Confusion matrix visualization
-│       ├── roc_curve.png         # ROC curve
-│       ├── pr_curve.png          # Precision-Recall curve
-│       └── grad_cam_samples/     # Grad-CAM visualization samples
+│   └── alexnet/
+│   │   ├── metrics_test.json
+│   │   ├── confusion_matrix_test.png
+│   │   ├── roc_curve_test.png
+│   │   └── grad_cam_samples/
+│   ├── vgg16/
+│   ├── plain_resnet18/
+│   ├── resnet_cbam/
+│   |   ├── metrics_test.json     # Performance metrics
+│   |   ├── confusion_matrix.png  # Confusion matrix visualization
+│   |   ├── roc_curve.png         # ROC curve
+│   |   ├── pr_curve.png          # Precision-Recall curve
+│   |   └── grad_cam_samples/     # Grad-CAM visualization samples
+│   ├── custom_resnet18/
+│   └── custom_resnet_cbam/
 ├── checkpoints/                  # Model checkpoints (generated during training)
-│   └── resnet_cbam/
-│       ├── best_model.pth        # Best model based on validation accuracy
-│       └── logs/                 # TensorBoard logs
+│   ├── alexnet/
+│   ├── vgg16/
+│   ├── plain_resnet18/
+│   ├── resnet_cbam/              # ⭐ Main model checkpoints
+│   │   ├── best_model.pth
+│   │   └── logs/                 # TensorBoard logs
+│   ├── custom_resnet18/
+│   └── custom_resnet_cbam/
 ├── requirements.txt              # Python dependencies
 ├── .gitignore                    # Git ignore file
 └── README.md                     # This file
@@ -163,7 +180,110 @@ The notebook includes:
 
 ### Training via CLI
 
-#### Train ResNet18 + CBAM (Pretrained Backbone - Recommended)
+> 💡 **Model Comparison Strategy**: To scientifically validate the ResNet18-CBAM architecture, train all models below and compare their performance. This demonstrates the evolution of CNN architectures and the impact of attention mechanisms.
+
+#### 1️⃣ Train AlexNet (Historical Baseline - 2012)
+
+AlexNet was the first deep CNN to win ImageNet, marking the beginning of the deep learning era.
+
+```bash
+# Linux/macOS
+python src/train.py \
+    --data-dir data/chest_xray \
+    --model alexnet \
+    --epochs 50 \
+    --batch-size 32 \
+    --lr 0.001 \
+    --output-dir checkpoints/alexnet \
+    --class-weights
+```
+
+```cmd
+# Windows (cmd)
+python src/train.py --data-dir data/chest_xray --model alexnet --epochs 50 --batch-size 32 --lr 0.001 --output-dir checkpoints/alexnet --class-weights
+```
+
+```powershell
+# Windows (PowerShell)
+python src/train.py `
+    --data-dir data/chest_xray `
+    --model alexnet `
+    --epochs 50 `
+    --batch-size 32 `
+    --lr 0.001 `
+    --output-dir checkpoints/alexnet `
+    --class-weights
+```
+
+#### 2️⃣ Train VGG16 (Historical Baseline - 2014)
+
+VGG16 demonstrated that network depth with small filters improves performance.
+
+```bash
+# Linux/macOS
+python src/train.py \
+    --data-dir data/chest_xray \
+    --model vgg16 \
+    --epochs 50 \
+    --batch-size 16 \
+    --lr 0.0001 \
+    --output-dir checkpoints/vgg16 \
+    --class-weights
+```
+
+```cmd
+# Windows (cmd)
+python src/train.py --data-dir data/chest_xray --model vgg16 --epochs 50 --batch-size 16 --lr 0.0001 --output-dir checkpoints/vgg16 --class-weights
+```
+
+```powershell
+# Windows (PowerShell)
+python src/train.py `
+    --data-dir data/chest_xray `
+    --model vgg16 `
+    --epochs 50 `
+    --batch-size 16 `
+    --lr 0.0001 `
+    --output-dir checkpoints/vgg16 `
+    --class-weights
+```
+
+**Note:** VGG16 has 138M parameters, so use smaller batch size (16) and lower learning rate (0.0001).
+
+#### 3️⃣ Train Plain ResNet18 (No Attention Baseline - 2015)
+
+Standard ResNet18 without CBAM - the primary baseline to evaluate attention's impact.
+
+```bash
+# Linux/macOS
+python src/train.py \
+    --data-dir data/chest_xray \
+    --model plain_resnet18 \
+    --epochs 50 \
+    --batch-size 32 \
+    --lr 0.001 \
+    --output-dir checkpoints/plain_resnet18 \
+    --class-weights
+```
+
+```cmd
+# Windows (cmd)
+python src/train.py --data-dir data/chest_xray --model plain_resnet18 --epochs 50 --batch-size 32 --lr 0.001 --output-dir checkpoints/plain_resnet18 --class-weights
+```
+
+```powershell
+# Windows (PowerShell)
+python src/train.py `
+    --data-dir data/chest_xray `
+    --model plain_resnet18 `
+    --epochs 50 `
+    --batch-size 32 `
+    --lr 0.001 `
+    --output-dir checkpoints/plain_resnet18 `
+    --class-weights
+```
+
+#### 4️⃣ Train ResNet18 + CBAM (Recommended Model - Pretrained)
 
 Use the standard pretrained implementation for best performance:
 
@@ -196,7 +316,40 @@ python src/train.py `
     --class-weights
 ```
 
-#### Train Custom ResNet18 + CBAM (From Scratch)
+#### 5️⃣ Train Custom ResNet18 (Ablation Control - No CBAM)
+
+Custom ResNet18 trained from scratch WITHOUT attention (ablation study control).
+
+```bash
+# Linux/macOS
+python src/train.py \
+    --data-dir data/chest_xray \
+    --model custom_resnet18 \
+    --epochs 70 \
+    --batch-size 32 \
+    --lr 0.001 \
+    --output-dir checkpoints/custom_resnet18 \
+    --class-weights
+```
+
+```cmd
+# Windows (cmd)
+python src/train.py --data-dir data/chest_xray --model custom_resnet18 --epochs 70 --batch-size 32 --lr 0.001 --output-dir checkpoints/custom_resnet18 --class-weights
+```
+
+```powershell
+# Windows (PowerShell)
+python src/train.py `
+    --data-dir data/chest_xray `
+    --model custom_resnet18 `
+    --epochs 70 `
+    --batch-size 32 `
+    --lr 0.001 `
+    --output-dir checkpoints/custom_resnet18 `
+    --class-weights
+```
+
+#### 6️⃣ Train Custom ResNet18 + CBAM (Ablation Test - From Scratch)
 
 Use the custom implementation built from scratch (trains without pretrained weights):
 
@@ -231,26 +384,135 @@ python src/train.py `
 
 **Note:** The custom implementation trains from scratch (no pretrained weights), so it typically requires more epochs (70+) to converge compared to the pretrained version (50 epochs).
 
+---
+
+### 📊 Model Comparison Guide
+
+To conduct a comprehensive baseline comparison:
+
+1. **Train all models** using the commands above
+2. **Evaluate each model** using the evaluation commands below
+3. **Compare results** from `evaluation/<model_name>/metrics_test.json`
+
+**Expected Insights:**
+- **AlexNet vs VGG16 vs ResNet**: Demonstrates architecture evolution (2012 → 2014 → 2015)
+- **Plain ResNet18 vs ResNet18-CBAM**: Shows the impact of CBAM attention mechanisms
+- **Custom ResNet18 vs Custom ResNet18-CBAM**: Ablation study isolating CBAM's contribution
+- **Pretrained vs From-Scratch**: Impact of transfer learning (ImageNet pretraining)
+
+---
+
 #### Training Arguments
 
 - `--data-dir`: Path to dataset directory
 - `--model`: Model architecture - choices:
-  - `resnet_cbam`: Standard ResNet18+CBAM with pretrained ImageNet weights (recommended)
-  - `custom_resnet_cbam`: Custom ResNet18+CBAM built from scratch (educational)
+  - `alexnet`: AlexNet (2012) - 8 layers, ~57M parameters
+  - `vgg16`: VGG16 (2014) - 16 layers, ~138M parameters
+  - `plain_resnet18`: ResNet18 without CBAM (2015) - 18 layers, ~11M parameters
+  - `resnet_cbam`: ResNet18 + CBAM with pretrained ImageNet weights (**recommended**)
+  - `custom_resnet18`: Custom ResNet18 from scratch, no CBAM (ablation control)
+  - `custom_resnet_cbam`: Custom ResNet18 + CBAM from scratch (ablation test)
 - `--epochs`: Number of training epochs (50 for pretrained, 70+ for custom)
-- `--batch-size`: Batch size for training
-- `--lr`: Learning rate
+- `--batch-size`: Batch size for training (32 for most models, 16 for VGG16)
+- `--lr`: Learning rate (0.001 for ResNet/AlexNet, 0.0001 for VGG16)
 - `--img-size`: Input image size (default: 224)
 - `--num-workers`: Number of data loading workers (set to 0 for Windows)
-- `--pretrained`: Use pretrained weights (only applies to `resnet_cbam`, default: True)
+- `--pretrained`: Use pretrained weights (applies to alexnet, vgg16, plain_resnet18, resnet_cbam)
 - `--output-dir`: Directory to save checkpoints and logs
-- `--class-weights`: Use class weights for imbalanced dataset
+- `--class-weights`: Use class weights for imbalanced dataset (recommended)
 
 ### Evaluation
 
-Evaluate a trained model on the test set:
+Evaluate a trained model on the test set. Results will be saved to `evaluation/<model_name>/`.
 
-#### Evaluate Standard ResNet18+CBAM (Pretrained)
+#### 1️⃣ Evaluate AlexNet
+
+```bash
+# Linux/macOS
+python src/evaluate.py \
+    --data-dir data/chest_xray \
+    --model alexnet \
+    --checkpoint checkpoints/alexnet/best_model.pth \
+    --split test \
+    --output-dir evaluation/alexnet \
+    --generate-grad-cam
+```
+
+```cmd
+# Windows (cmd)
+python src/evaluate.py --data-dir data/chest_xray --model alexnet --checkpoint checkpoints/alexnet/best_model.pth --split test --output-dir evaluation/alexnet --generate-grad-cam
+```
+
+```powershell
+# Windows (PowerShell)
+python src/evaluate.py `
+    --data-dir data/chest_xray `
+    --model alexnet `
+    --checkpoint checkpoints/alexnet/best_model.pth `
+    --split test `
+    --output-dir evaluation/alexnet `
+    --generate-grad-cam
+```
+
+#### 2️⃣ Evaluate VGG16
+
+```bash
+# Linux/macOS
+python src/evaluate.py \
+    --data-dir data/chest_xray \
+    --model vgg16 \
+    --checkpoint checkpoints/vgg16/best_model.pth \
+    --split test \
+    --output-dir evaluation/vgg16 \
+    --generate-grad-cam
+```
+
+```cmd
+# Windows (cmd)
+python src/evaluate.py --data-dir data/chest_xray --model vgg16 --checkpoint checkpoints/vgg16/best_model.pth --split test --output-dir evaluation/vgg16 --generate-grad-cam
+```
+
+```powershell
+# Windows (PowerShell)
+python src/evaluate.py `
+    --data-dir data/chest_xray `
+    --model vgg16 `
+    --checkpoint checkpoints/vgg16/best_model.pth `
+    --split test `
+    --output-dir evaluation/vgg16 `
+    --generate-grad-cam
+```
+
+#### 3️⃣ Evaluate Plain ResNet18 (No CBAM)
+
+```bash
+# Linux/macOS
+python src/evaluate.py \
+    --data-dir data/chest_xray \
+    --model plain_resnet18 \
+    --checkpoint checkpoints/plain_resnet18/best_model.pth \
+    --split test \
+    --output-dir evaluation/plain_resnet18 \
+    --generate-grad-cam
+```
+
+```cmd
+# Windows (cmd)
+python src/evaluate.py --data-dir data/chest_xray --model plain_resnet18 --checkpoint checkpoints/plain_resnet18/best_model.pth --split test --output-dir evaluation/plain_resnet18 --generate-grad-cam
+```
+
+```powershell
+# Windows (PowerShell)
+python src/evaluate.py `
+    --data-dir data/chest_xray `
+    --model plain_resnet18 `
+    --checkpoint checkpoints/plain_resnet18/best_model.pth `
+    --split test `
+    --output-dir evaluation/plain_resnet18 `
+    --generate-grad-cam
+```
+
+#### 4️⃣ Evaluate ResNet18 + CBAM (Pretrained)
 
 ```bash
 # Linux/macOS
@@ -279,7 +541,36 @@ python src/evaluate.py `
     --generate-grad-cam
 ```
 
-#### Evaluate Custom ResNet18+CBAM (From Scratch)
+#### 5️⃣ Evaluate Custom ResNet18 (Ablation Control)
+
+```bash
+# Linux/macOS
+python src/evaluate.py \
+    --data-dir data/chest_xray \
+    --model custom_resnet18 \
+    --checkpoint checkpoints/custom_resnet18/best_model.pth \
+    --split test \
+    --output-dir evaluation/custom_resnet18 \
+    --generate-grad-cam
+```
+
+```cmd
+# Windows (cmd)
+python src/evaluate.py --data-dir data/chest_xray --model custom_resnet18 --checkpoint checkpoints/custom_resnet18/best_model.pth --split test --output-dir evaluation/custom_resnet18 --generate-grad-cam
+```
+
+```powershell
+# Windows (PowerShell)
+python src/evaluate.py `
+    --data-dir data/chest_xray `
+    --model custom_resnet18 `
+    --checkpoint checkpoints/custom_resnet18/best_model.pth `
+    --split test `
+    --output-dir evaluation/custom_resnet18 `
+    --generate-grad-cam
+```
+
+#### 6️⃣ Evaluate Custom ResNet18 + CBAM (From Scratch)
 
 ```bash
 # Linux/macOS
@@ -310,11 +601,77 @@ python src/evaluate.py `
 
 This will generate:
 - **Classification Report**: Detailed metrics for each class
-- **Confusion Matrix**: Visual representation saved as `confusion_matrix.png`
-- **ROC Curve**: Receiver Operating Characteristic curve saved as `roc_curve.png`
-- **Precision-Recall Curve**: PR curve saved as `pr_curve.png`
+- **Confusion Matrix**: Visual representation saved as `confusion_matrix_test.png`
+- **ROC Curve**: Receiver Operating Characteristic curve saved as `roc_curve_test.png`
+- **Precision-Recall Curve**: PR curve saved as `pr_curve_test.png`
 - **Metrics JSON**: All metrics saved to `metrics_test.json`
 - **Grad-CAM Visualizations**: Sample heatmaps saved in `grad_cam_samples/` folder
+
+### 📊 Compare All Models
+
+After training and evaluating all models, use the comparison script to generate a comprehensive comparison table:
+
+```bash
+# All platforms
+python src/compare_models.py --evaluation-dir evaluation --output model_comparison.csv
+```
+
+This will:
+- Load metrics from all models in `evaluation/` directory
+- Generate a comparison table sorted by accuracy
+- Highlight the best performing model
+- Provide category analysis (historical baselines, ResNet family, attention impact)
+- Save results to `model_comparison.csv`
+
+**Manual comparison:**
+
+```bash
+# Linux/macOS
+cat evaluation/alexnet/metrics_test.json
+cat evaluation/vgg16/metrics_test.json
+cat evaluation/plain_resnet18/metrics_test.json
+cat evaluation/resnet_cbam/metrics_test.json
+cat evaluation/custom_resnet18/metrics_test.json
+cat evaluation/custom_resnet_cbam/metrics_test.json
+```
+
+```cmd
+# Windows (cmd)
+type evaluation\alexnet\metrics_test.json
+type evaluation\vgg16\metrics_test.json
+type evaluation\plain_resnet18\metrics_test.json
+type evaluation\resnet_cbam\metrics_test.json
+type evaluation\custom_resnet18\metrics_test.json
+type evaluation\custom_resnet_cbam\metrics_test.json
+```
+
+```powershell
+# Windows (PowerShell)
+Get-Content evaluation/alexnet/metrics_test.json
+Get-Content evaluation/vgg16/metrics_test.json
+Get-Content evaluation/plain_resnet18/metrics_test.json
+Get-Content evaluation/resnet_cbam/metrics_test.json
+Get-Content evaluation/custom_resnet18/metrics_test.json
+Get-Content evaluation/custom_resnet_cbam/metrics_test.json
+```
+
+**Key Comparisons:**
+
+1. **Architecture Evolution** (Historical Baselines):
+   - `alexnet` (2012) → `vgg16` (2014) → `plain_resnet18` (2015)
+   - Shows progression from early deep CNNs to modern residual networks
+
+2. **Attention Mechanism Impact** (Main Comparison):
+   - `plain_resnet18` (no attention) vs `resnet_cbam` (with CBAM)
+   - Demonstrates the benefit of attention mechanisms
+
+3. **Ablation Study** (CBAM Contribution):
+   - `custom_resnet18` (no CBAM) vs `custom_resnet_cbam` (with CBAM)
+   - Both trained from scratch to isolate CBAM's effect
+
+4. **Transfer Learning Impact**:
+   - `plain_resnet18` (pretrained) vs `custom_resnet18` (from scratch)
+   - Shows the value of ImageNet pretraining
 
 ### Grad-CAM Visualization
 

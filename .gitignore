@@ -69,6 +69,7 @@ checkpoints/
 *.ckpt
 *.weights
 *.model
+*.csv
 
 # Evaluation results (generated files)
 evaluation/

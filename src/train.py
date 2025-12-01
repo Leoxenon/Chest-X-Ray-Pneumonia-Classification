@@ -14,7 +14,10 @@ import json
 
 from data import get_data_loaders
 from models.resnet_cbam import get_resnet_cbam
-from models.custom_resnet_cbam import get_custom_resnet_cbam
+from models.custom_resnet_cbam import get_custom_resnet_cbam, get_custom_resnet18
+from models.plain_resnet18 import get_plain_resnet18
+from models.alexnet import get_alexnet
+from models.vgg16 import get_vgg16
 
 
 def train_epoch(model, train_loader, criterion, optimizer, device, epoch, writer=None):
@@ -169,8 +172,21 @@ def train(args):
             print("Warning: Custom ResNet18-CBAM doesn't support pretrained weights.")
             print("Training from scratch with He initialization...")
         model = get_custom_resnet_cbam(num_classes=args.num_classes)
+    elif args.model == 'custom_resnet18':
+        if args.pretrained:
+            print("Warning: Custom ResNet18 doesn't support pretrained weights.")
+            print("Training from scratch with He initialization...")
+        model = get_custom_resnet18(num_classes=args.num_classes)
+    elif args.model == 'plain_resnet18':
+        model = get_plain_resnet18(num_classes=args.num_classes, pretrained=args.pretrained)
+    elif args.model == 'alexnet':
+        model = get_alexnet(num_classes=args.num_classes, pretrained=args.pretrained)
+    elif args.model == 'vgg16':
+        model = get_vgg16(num_classes=args.num_classes, pretrained=args.pretrained)
     else:
-        raise ValueError(f'Unknown model: {args.model}. Supported models: "resnet_cbam", "custom_resnet_cbam"')
+        raise ValueError(f'Unknown model: {args.model}. Supported models: '
+                        '"resnet_cbam", "custom_resnet_cbam", "custom_resnet18", '
+                        '"plain_resnet18", "alexnet", "vgg16"')
     
     model = model.to(device)
     
@@ -273,9 +289,15 @@ def main():
     
     # Model arguments
     parser.add_argument('--model', type=str, default='resnet_cbam',
-                        choices=['resnet_cbam', 'custom_resnet_cbam'],
+                        choices=['resnet_cbam', 'custom_resnet_cbam', 'custom_resnet18',
+                                'plain_resnet18', 'alexnet', 'vgg16'],
                         help='Model architecture (default: resnet_cbam). '
-                             'Options: resnet_cbam (pretrained), custom_resnet_cbam (from scratch)')
+                             'Options: resnet_cbam (pretrained ResNet18+CBAM), '
+                             'custom_resnet_cbam (from-scratch ResNet18+CBAM), '
+                             'custom_resnet18 (from-scratch ResNet18 no CBAM), '
+                             'plain_resnet18 (pretrained ResNet18 no CBAM), '
+                             'alexnet (pretrained AlexNet), '
+                             'vgg16 (pretrained VGG16)')
     parser.add_argument('--num-classes', type=int, default=2,
                         help='Number of classes (default: 2)')
     parser.add_argument('--pretrained', action='store_true', default=True,
