@@ -1,13 +1,8 @@
 # Pneumonia Detection from Chest X-Ray Images Using ResNet18-CBAM with Grad-CAM Interpretability
 
-**COMP3057 Machine Learning Mini-Project Report**
-
 **Author:** CHEN Xinyu  
-**Student ID:** 23270217  
-**Date:** December 1, 2025  
+**Student ID:** 23270217    
 **GitHub:** https://github.com/Leoxenon/Chest-X-Ray-Pneumonia-Classification
-
----
 
 ## 1. Introduction
 
@@ -16,8 +11,6 @@ Pneumonia causes over 800,000 child deaths annually (WHO, 2023), making accurate
 **Dataset:** Chest X-Ray Images from Kaggle (Kermany et al., 2018) - 5,216 training images, 624 test images (234 normal, 390 pneumonia) from pediatric patients aged 1-5.
 
 **Objective:** Achieve >95% sensitivity with interpretable predictions through systematic comparison of CNN architectures to justify ResNet18-CBAM selection
-
----
 
 ## 2. Methodology
 
@@ -71,8 +64,6 @@ Target Class → Compute Gradients → Weight Feature Maps → Generate Heatmap
 - Critical for clinical deployment and regulatory approval
 
 **Implementation:** Target layer = `layer4` (final conv layer before pooling)
-
----
 
 ## 3. Results and Analysis
 
@@ -161,8 +152,6 @@ Target Class → Compute Gradients → Weight Feature Maps → Generate Heatmap
 - Builds trust by showing "reasoning" (not black box)
 - Helps identify model weaknesses (edge artifacts, cardiac shadow confusion)
 
----
-
 ## 4. Discussion
 
 ### 4.1 Summary of Findings
@@ -204,32 +193,16 @@ Target Class → Compute Gradients → Weight Feature Maps → Generate Heatmap
 3. **Ablation study revealing CBAM limitations** with pretrained models (counter-intuitive finding)
 4. **Grad-CAM implementation** for clinical interpretability
 
-### 4.4 Future Work
-
-**Immediate:**
-- Ensemble plain ResNet18 + ResNet18-CBAM to balance performance
-- Threshold optimization for different use cases (screening vs diagnosis)
-- Test on external datasets (NIH ChestX-ray14, CheXpert, MIMIC-CXR)
-
-**Long-term:**
-- Multi-institutional validation with adult patients
-- Multi-class extension (bacterial/viral/COVID-19 pneumonia)
-- Prospective clinical trial with radiologist feedback
-
----
-
 ## 5. Conclusion
 
-This project systematically validated ResNet18 as the optimal architecture for pneumonia detection through comprehensive baseline comparison. **Plain ResNet18 achieved 87.98% accuracy and 97.18% recall** - the best balance among six tested models while maintaining efficiency (11M parameters).
+This project systematically validated ResNet18 as the optimal architecture for pneumonia detection through comprehensive baseline comparison. **Plain ResNet18 achieved 87.98% accuracy and 97.18% recall**, which is the best balance among six tested models while maintaining efficiency (11M parameters).
 
 **Key Insights:**
 - **Architecture evolution confirmed**: ResNet18 (2015) significantly outperforms AlexNet (2012) while matching VGG16 (2014) with 12× fewer parameters
-- **CBAM attention**: Beneficial for from-scratch training (+1.80% recall) but **unexpectedly hurts pretrained models** (-3.04% accuracy) - important finding for transfer learning research
+- **CBAM attention**: Beneficial for from-scratch training (+1.80% recall) but **unexpectedly hurts pretrained models** (-3.04% accuracy)， which could be considered as an important finding for transfer learning research
 - **Grad-CAM interpretability**: Successfully highlights clinically relevant lung regions, enabling radiologist trust and validation
 
-**Recommended Model:** Plain ResNet18 (pretrained) for best overall performance and deployment efficiency.
-
-**Clinical Potential:** 97.18% recall suitable for screening applications with radiologist oversight, though external validation required before deployment.
+**Clinical Potential:** Suitable for screening applications with radiologist oversight, though external validation required before deployment.
 
 ---
 
