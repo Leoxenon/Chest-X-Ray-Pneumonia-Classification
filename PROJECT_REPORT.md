@@ -1,4 +1,4 @@
-# Project Report: Pneumonia Detection from Chest X-Ray Images
+# Project Report: Chest X-Ray Pneumonia Classification
 
 **Author:** CHEN Xinyu  
 **Student ID:** 23270217    

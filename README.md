@@ -172,11 +172,15 @@ For interactive exploration and training:
 jupyter notebook notebooks/train_notebook.ipynb
 ```
 
+can also be directly run on Google Colab.
+
 The notebook includes:
 - Data exploration and visualization
 - Model training with progress tracking
 - Evaluation and metrics visualization
 - Prediction examples
+
+Notes: This notebook is only for quick experience of the proposed ResNet18-CBAM model. If you wish to reproduce the results of the comparative experiment, please follow the subsequent guidance steps. Should you be unable to reproduce the results, feel free to email me at any time to request my model weights and evaluation metrics.
 
 ### Training via CLI
 
