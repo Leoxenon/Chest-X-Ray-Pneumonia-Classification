@@ -1,4 +1,4 @@
-# Pneumonia Detection from Chest X-Ray Images Using ResNet18-CBAM with Grad-CAM Interpretability
+# Project Report: Pneumonia Detection from Chest X-Ray Images
 
 **Author:** CHEN Xinyu  
 **Student ID:** 23270217    
@@ -6,24 +6,26 @@
 
 ## 1. Introduction
 
-Pneumonia causes over 800,000 child deaths annually (WHO, 2023), making accurate chest X-ray diagnosis critical. However, radiologist shortages and diagnostic variability (60-80% inter-observer agreement) create challenges. This project develops an automated pneumonia detection system using deep learning.
+Pneumonia causes over 800,000 child deaths annually (WHO, 2023), making accurate chest X-ray diagnosis critical. However, radiologist shortages and diagnostic variability (60-80% inter-observer agreement) create challenges. This project aims to discover an effective way to realize automated pneumonia detection using deep learning.
 
 **Dataset:** Chest X-Ray Images from Kaggle (Kermany et al., 2018) - 5,216 training images, 624 test images (234 normal, 390 pneumonia) from pediatric patients aged 1-5.
 
-**Objective:** Achieve >95% sensitivity with interpretable predictions through systematic comparison of CNN architectures to justify ResNet18-CBAM selection
+**Objective:** Discover the most suitable baseline model and verify whether the newly proposed creative features are genuinely effective in current task.
 
 ## 2. Methodology
 
 ### 2.1 Baseline Model Comparison
 
-To scientifically justify our architecture choice, we trained and compared six models representing CNN evolution from 2012-2018:
+To scientifically justify the architecture choice, I trained and compared six models representing CNN evolution from 2012-2018:
 
 **Historical Baselines:**
+These baselines utilize pretrained models provided by PyTorch. 
 - **AlexNet (2012)**: First deep CNN breakthrough, 8 layers, ~57M parameters
 - **VGG16 (2014)**: Deep uniform architecture with 3×3 filters, 16 layers, ~138M parameters
 - **Plain ResNet18 (2015)**: Introduced skip connections, 18 layers, ~11M parameters
 
-**Our Proposed Models:**
+**Proposed Models:**
+After Comparing baseline models, I selected ResNet18 for further exploration. Besides PyTorch pretrained ResNet18, I also construct a ResNet18 from scratch.
 - **ResNet18-CBAM (Pretrained)**: ResNet18 + attention mechanisms with ImageNet initialization
 - **Custom ResNet18 (From Scratch)**: Baseline without attention (ablation control)
 - **Custom ResNet18-CBAM (From Scratch)**: ResNet18 + attention from random initialization (ablation test)
@@ -48,8 +50,6 @@ Feature Map → Channel Attention (what is important?)
 - **Channel Attention**: Uses avg/max pooling + MLP to weight feature channels
 - **Spatial Attention**: Uses 7×7 conv on channel-pooled features to create spatial weights
 - **Cost**: Only +0.5M parameters (~4% overhead on 11M ResNet18)
-
-**Research Question:** Does attention improve pneumonia detection compared to plain ResNet18?
 
 ### 2.3 Innovation 2: Grad-CAM Interpretability
 
@@ -76,9 +76,6 @@ Target Class → Compute Gradients → Weight Feature Maps → Generate Heatmap
 | **VGG16** | **88.46%** | 86.64% | 96.41% | 91.26% | **95.94%** | 138M |
 | **Plain ResNet18** | **87.98%** | 85.55% | **97.18%** | **91.00%** | **96.25%** | 11M |
 | **AlexNet** | 85.74% | 84.28% | 94.87% | 89.26% | 94.49% | 57M |
-| **ResNet18-CBAM** | 84.94% | 82.46% | 96.41% | 88.89% | 92.81% | 11.7M |
-| Custom ResNet18 | 83.65% | 80.77% | 96.92% | 88.11% | 93.76% | 11M |
-| Custom ResNet18-CBAM | 81.73% | 77.94% | **98.72%** | 87.10% | 93.33% | 11.7M |
 
 **Key Findings:**
 
@@ -132,6 +129,7 @@ Target Class → Compute Gradients → Weight Feature Maps → Generate Heatmap
 - Trade-off: Higher sensitivity at cost of specificity
 
 **Conclusion on CBAM:**
+Generally, The performance with CBAM is reduced for both pretrained and custom models. The pretrained model was more significantly affected. While the customized model's overall performance saw a slight decline, its sensitivity improved.
 - ✓ **Benefit for from-scratch training:** Improves recall (critical for medical screening)
 - ✗ **Hurts pretrained models:** Interferes with existing features
 - ⚠️ **Trade-off:** Better sensitivity, worse specificity
@@ -146,6 +144,20 @@ Target Class → Compute Gradients → Weight Feature Maps → Generate Heatmap
 - ✓ **Normal cases:** Distributed, low-intensity activations across lung fields
 - ⚠️ **Some false positives:** Activations on cardiac silhouette edges (not pneumonia)
 - ⚠️ **Subtle cases:** Early-stage pneumonia with faint findings less consistently detected
+
+**Representative Grad-CAM Examples (ResNet18-CBAM):**
+
+<div align="center">
+  <img src="evaluation/resnet_cbam/grad_cam_visualizations/grad_cam_sample_0_IM-0001-0001.jpeg" width="45%" alt="Normal Case 1"/>
+  <img src="evaluation/resnet_cbam/grad_cam_visualizations/grad_cam_sample_1_IM-0003-0001.jpeg" width="45%" alt="Normal Case 2"/>
+  <p><em>Figure 1: Normal chest X-rays with diffuse, low-intensity attention across lung fields (True Negatives)</em></p>
+</div>
+
+<div align="center">
+  <img src="evaluation/resnet_cbam/grad_cam_visualizations/grad_cam_sample_5_person100_bacteria_475.jpeg" width="45%" alt="Pneumonia Case 1"/>
+  <img src="evaluation/resnet_cbam/grad_cam_visualizations/grad_cam_sample_6_person100_bacteria_477.jpeg" width="45%" alt="Pneumonia Case 2"/>
+  <p><em>Figure 2: Bacterial pneumonia cases with focused attention on lung infiltrates and opacities (True Positives)</em></p>
+</div>
 
 **Clinical Value:**
 - Radiologists can verify model focuses on relevant anatomical regions
@@ -167,7 +179,7 @@ Target Class → Compute Gradients → Weight Feature Maps → Generate Heatmap
   - Reason: Interferes with pretrained ImageNet features during fine-tuning
 - ✓ **Helps from-scratch training**: +1.80% recall (better pneumonia detection)
   - Reason: Guides learning when starting from random weights
-- **Lesson:** Attention mechanisms beneficial for from-scratch training but can harm transfer learning
+- Convolutional Block Attention Module (CBAM) may not help improve the performance for both models, especially harm the transfer learning. However, it can beneficial for from-scratch training in some scenarios where high sensitivity is the main objective.
 
 **3. Grad-CAM Validates Clinical Relevance**
 - Model correctly focuses on lung infiltrates and opacities in pneumonia
@@ -186,21 +198,14 @@ Target Class → Compute Gradients → Weight Feature Maps → Generate Heatmap
 - CBAM tradeoff: Higher sensitivity but lower specificity
 - No multi-class classification (bacterial vs viral pneumonia)
 
-### 4.3 Key Contributions
-
-1. **First systematic baseline comparison** for this dataset (AlexNet/VGG/ResNet)
-2. **Evidence-based architecture selection** through quantitative comparison
-3. **Ablation study revealing CBAM limitations** with pretrained models (counter-intuitive finding)
-4. **Grad-CAM implementation** for clinical interpretability
-
 ## 5. Conclusion
 
 This project systematically validated ResNet18 as the optimal architecture for pneumonia detection through comprehensive baseline comparison. **Plain ResNet18 achieved 87.98% accuracy and 97.18% recall**, which is the best balance among six tested models while maintaining efficiency (11M parameters).
 
 **Key Insights:**
-- **Architecture evolution confirmed**: ResNet18 (2015) significantly outperforms AlexNet (2012) while matching VGG16 (2014) with 12× fewer parameters
-- **CBAM attention**: Beneficial for from-scratch training (+1.80% recall) but **unexpectedly hurts pretrained models** (-3.04% accuracy)， which could be considered as an important finding for transfer learning research
-- **Grad-CAM interpretability**: Successfully highlights clinically relevant lung regions, enabling radiologist trust and validation
+- **Architecture evolution confirmed**: ResNet18 (2015) significantly outperforms AlexNet (2012) while matching VGG16 (2014) with 12× fewer parameters.
+- **CBAM attention**: Negative impact on overall accuracy, especially hurts pretrained models (-3.04% accuracy), which could be considered as an important finding for transfer learning research. However, it is beneficial for from-scratch training (+1.80% recall), from the perspective of sensitivity. 
+- **Grad-CAM interpretability**: Successfully highlights clinically relevant lung regions, enabling radiologist trust and validation.
 
 **Clinical Potential:** Suitable for screening applications with radiologist oversight, though external validation required before deployment.
 
@@ -214,5 +219,3 @@ This project systematically validated ResNet18 as the optimal architecture for p
 4. Kermany, D. S., et al. (2018). Identifying Medical Diagnoses by Image-Based Deep Learning. *Cell*, 172(5).
 5. Krizhevsky, A., et al. (2012). ImageNet Classification with Deep CNNs. *NIPS 2012*.
 6. Simonyan, K., & Zisserman, A. (2015). Very Deep CNNs for Large-Scale Image Recognition. *ICLR 2015*.
-
----
