@@ -149,7 +149,7 @@ Generally, The performance with CBAM is reduced for both pretrained and custom m
 
 <div align="center">
   <img src="evaluation/resnet_cbam/grad_cam_visualizations/grad_cam_sample_0_IM-0001-0001.jpeg" width="45%" alt="Normal Case 1"/>
-  <img src="evaluation/resnet_cbam/grad_cam_visualizations/grad_cam_sample_1_IM-0003-0001.jpeg" width="45%" alt="Normal Case 2"/>
+  <img src="evaluation/resnet_cbam/grad_cam_visualizations/grad_cam_sample_2_IM-0005-0001.jpeg" width="45%" alt="Normal Case 2"/>
   <p><em>Figure 1: Normal chest X-rays with diffuse, low-intensity attention across lung fields (True Negatives)</em></p>
 </div>
 
@@ -198,16 +198,17 @@ Generally, The performance with CBAM is reduced for both pretrained and custom m
 - CBAM tradeoff: Higher sensitivity but lower specificity
 - No multi-class classification (bacterial vs viral pneumonia)
 
-## 5. Conclusion
+### 4.3 Future Work
 
-This project systematically validated ResNet18 as the optimal architecture for pneumonia detection through comprehensive baseline comparison. **Plain ResNet18 achieved 87.98% accuracy and 97.18% recall**, which is the best balance among six tested models while maintaining efficiency (11M parameters).
+**Immediate:**
+- Ensemble plain ResNet18 + ResNet18-CBAM to balance performance
+- Threshold optimization for different use cases (screening vs diagnosis)
+- Test on external datasets (NIH ChestX-ray14, CheXpert, MIMIC-CXR)
 
-**Key Insights:**
-- **Architecture evolution confirmed**: ResNet18 (2015) significantly outperforms AlexNet (2012) while matching VGG16 (2014) with 12× fewer parameters.
-- **CBAM attention**: Negative impact on overall accuracy, especially hurts pretrained models (-3.04% accuracy), which could be considered as an important finding for transfer learning research. However, it is beneficial for from-scratch training (+1.80% recall), from the perspective of sensitivity. 
-- **Grad-CAM interpretability**: Successfully highlights clinically relevant lung regions, enabling radiologist trust and validation.
-
-**Clinical Potential:** Suitable for screening applications with radiologist oversight, though external validation required before deployment.
+**Long-term:**
+- Multi-institutional validation with adult patients
+- Multi-class extension (bacterial/viral/COVID-19 pneumonia)
+- Prospective clinical trial with radiologist feedback
 
 ---
 
