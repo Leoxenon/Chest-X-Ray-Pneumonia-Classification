@@ -101,10 +101,10 @@ Target Class → Compute Gradients → Weight Feature Maps → Generate Heatmap
 
 | Metric | Plain ResNet18 | ResNet18-CBAM | Δ (Impact of CBAM) |
 |--------|----------------|---------------|---------------------|
-| Accuracy | **87.98%** | 84.94% | **-3.04%** ⚠️ |
+| Accuracy | **87.98%** | 84.94% | **-3.04%** |
 | Recall | **97.18%** | 96.41% | -0.77% |
 | Precision | **85.55%** | 82.46% | -3.09% |
-| ROC-AUC | **96.25%** | 92.81% | **-3.44%** ⚠️ |
+| ROC-AUC | **96.25%** | 92.81% | **-3.44%** |
 
 **Unexpected Result:** CBAM **decreased** performance on pretrained ResNet18!
 
@@ -118,8 +118,8 @@ Target Class → Compute Gradients → Weight Feature Maps → Generate Heatmap
 
 | Metric | Custom ResNet18 | Custom ResNet18-CBAM | Δ (Impact of CBAM) |
 |--------|-----------------|----------------------|---------------------|
-| Accuracy | **83.65%** | 81.73% | **-1.92%** ⚠️ |
-| Recall | 96.92% | **98.72%** | **+1.80%** ✓ |
+| Accuracy | **83.65%** | 81.73% | **-1.92%** |
+| Recall | 96.92% | **98.72%** | **+1.80%** |
 | Precision | **80.77%** | 77.94% | -2.83% |
 | ROC-AUC | **93.76%** | 93.33% | -0.43% |
 
@@ -130,9 +130,9 @@ Target Class → Compute Gradients → Weight Feature Maps → Generate Heatmap
 
 **Conclusion on CBAM:**
 Generally, The performance with CBAM is reduced for both pretrained and custom models. The pretrained model was more significantly affected. While the customized model's overall performance saw a slight decline, its sensitivity improved.
-- ✓ **Benefit for from-scratch training:** Improves recall (critical for medical screening)
-- ✗ **Hurts pretrained models:** Interferes with existing features
-- ⚠️ **Trade-off:** Better sensitivity, worse specificity
+- **Benefit for from-scratch training:** Improves recall (critical for medical screening)
+- **Hurts pretrained models:** Interferes with existing features
+- **Trade-off:** Better sensitivity, worse specificity
 - **Decision:** Use plain ResNet18 for this dataset (better overall balance)
 
 ### 3.3 Grad-CAM Interpretability Results
@@ -140,10 +140,10 @@ Generally, The performance with CBAM is reduced for both pretrained and custom m
 **Purpose:** Visualize model attention to verify clinical relevance
 
 **Observations:**
-- ✓ **Pneumonia cases:** Heatmaps highlight lung infiltrates, opacities, and consolidations
-- ✓ **Normal cases:** Distributed, low-intensity activations across lung fields
-- ⚠️ **Some false positives:** Activations on cardiac silhouette edges (not pneumonia)
-- ⚠️ **Subtle cases:** Early-stage pneumonia with faint findings less consistently detected
+- **Pneumonia cases:** Heatmaps highlight lung infiltrates, opacities, and consolidations
+- **Normal cases:** Distributed, low-intensity activations across lung fields
+- **Some false positives:** Activations on cardiac silhouette edges (not pneumonia)
+- **Subtle cases:** Early-stage pneumonia with faint findings less consistently detected
 
 **Representative Grad-CAM Examples (ResNet18-CBAM):**
 
@@ -175,9 +175,9 @@ Generally, The performance with CBAM is reduced for both pretrained and custom m
 - AlexNet outdated architecture shows expected lower performance (-2.24% accuracy)
 
 **2. CBAM Attention: Context-Dependent Value**
-- ✗ **Hurts pretrained ResNet18**: -3.04% accuracy, -3.44% ROC-AUC
+- **Hurts pretrained ResNet18**: -3.04% accuracy, -3.44% ROC-AUC
   - Reason: Interferes with pretrained ImageNet features during fine-tuning
-- ✓ **Helps from-scratch training**: +1.80% recall (better pneumonia detection)
+- **Helps from-scratch training**: +1.80% recall (better pneumonia detection)
   - Reason: Guides learning when starting from random weights
 - Convolutional Block Attention Module (CBAM) may not help improve the performance for both models, especially harm the transfer learning. However, it can beneficial for from-scratch training in some scenarios where high sensitivity is the main objective.
 
